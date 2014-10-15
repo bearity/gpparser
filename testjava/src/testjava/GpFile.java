@@ -6,6 +6,7 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
 import java.nio.charset.Charset;
@@ -355,32 +356,58 @@ public class GpFile {
 	
 	BufferedReader br;
 	FileInputStream fis;
+	InputStreamReader isr;
 	
-	public char[] readChars(int characters) {
-		char[] chars = new char[characters];
+	String encoding = "EUC-KR";
+	int readCount;
+	
+	public int readChar() {
+		int tmp = -1;
+		try {
+			tmp = fis.read();
+			readCount++;
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		
+		return tmp;
+	}
+	public byte[] readBytes(int characters) {
+		byte[] bytes = new byte[characters];
 		
 		try {
-			br.read(chars,0,characters);
+			
+			fis.read(bytes,0,characters);
+			readCount+=characters;
 			
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
 		
-		return chars;
+		return bytes;
 	}
 	
 	public Field getContent41x() {
 		Field tmpField = new Field();
+		StringBuilder sb = new StringBuilder();
 		
-		char[] charTmp = readChars(4);
-		byte[] byteTmp = toBytes(charTmp);
+		byte[] byteTmp = readBytes(4);
+		
+		
+		readCount+=4;
 
 		tmpField.fieldLength = byteArrayToInt(byteTmp);
+		tmpField.stringLength = readChar();
+		readCount++;
 		
+		byteTmp = readBytes(tmpField.stringLength);
+		readCount+=tmpField.stringLength;
 		
-		tmpField.stringLength = readChars(1)[0];
-		tmpField.string = String.valueOf(readChars(tmpField.stringLength));
-		
+		try {
+			tmpField.string = new String(byteTmp, encoding);
+		} catch (UnsupportedEncodingException e) {
+			e.printStackTrace();
+		}
 		return tmpField;
 	}
 	
@@ -389,7 +416,6 @@ public class GpFile {
 			int tmpInt = 0, rythmFeel = 0;
 			String tmpStr = null;
 			fis = new FileInputStream(f);
-			br = new BufferedReader(new InputStreamReader(fis,"euc-kr"));
 			/*
 			FILE VERSION HEADER (31 bytes):
 			1 byte:		Version string length
@@ -437,8 +463,9 @@ public class GpFile {
 			!Shuffle rhythm feel (only if the major file version is  <= 4):
 			[1 byte]:		Shuffle rhythm feel 
 			*/
-			tmpInt = readChars(1)[0];
-			tmpStr = String.valueOf(readChars(tmpInt));
+			
+			tmpInt = fis.read();
+			tmpStr = new String(readBytes(tmpInt), encoding);
 			
 			switch(tmpStr) {
 			case Version.GUITAR_PRO_510:
@@ -446,7 +473,7 @@ public class GpFile {
 				break;
 			}
 			
-			readChars(29-tmpInt);
+			readBytes(30-tmpInt);
 			
 			title = getContent41x();
 			subtitle = getContent41x();
@@ -460,28 +487,26 @@ public class GpFile {
 			copyright = getContent41x();
 			tab = getContent41x();
 			instructions = getContent41x();
-			tmpInt = byteArrayToInt(toBytes(readChars(4)));
+			tmpInt = byteArrayToInt(readBytes(4));
 			notices = new Field[tmpInt];
 
 			for(int i=0;i<tmpInt;i++) {
 				notices[i] = getContent41x();
 			}
 			if(version <= 4) {
-				rythmFeel = readChars(1)[0];
+				rythmFeel = readChar();
 			}
 			if(version >= 4) {
 				lyrics = new Lyrics[5];
 				for(int i=0;i<5;i++) {
 					lyrics[i] = new Lyrics();
-					lyrics[i].associatedTrack = byteArrayToInt(toBytes(readChars(4)));
-					lyrics[i].startFrom = byteArrayToInt(toBytes(readChars(4)));
+					lyrics[i].associatedTrack = byteArrayToInt(readBytes(4));
+					lyrics[i].startFrom = byteArrayToInt(readBytes(4));
 					if(lyrics[i].startFrom != 0) {
-						lyrics[i].lyricLength = byteArrayToInt(toBytes(readChars(4)));
-					
-						lyrics[i].string = String.valueOf(readChars(lyrics[i].lyricLength));
+						lyrics[i].lyricLength = byteArrayToInt(readBytes(4));
+						lyrics[i].string = new String(readBytes(lyrics[i].lyricLength), encoding);
 					}
 					else {
-						
 					}
 				}
 				
@@ -490,32 +515,32 @@ public class GpFile {
 			// !VOLUME/EQUALIZATION SETTINGS (only if the major file version is > 5)
 			if(version > 5) {
 				volumeEQ = new VolumeEQ();
-				volumeEQ.masterVolume = byteArrayToInt(toBytes(readChars(4)));
-				volumeEQ.unknownData = byteArrayToInt(toBytes(readChars(4)));
-				volumeEQ._32Hz = readChars(1)[0];
-				volumeEQ._60Hz = readChars(1)[0];
-				volumeEQ._125Hz = readChars(1)[0];
-				volumeEQ._250Hz = readChars(1)[0];
-				volumeEQ._500Hz = readChars(1)[0];
-				volumeEQ._1KHz = readChars(1)[0];
-				volumeEQ._2KHz = readChars(1)[0];
-				volumeEQ._4KHz = readChars(1)[0];
-				volumeEQ._8KHz = readChars(1)[0];
-				volumeEQ._16KHz = readChars(1)[0];
-				volumeEQ.overallGain = readChars(1)[0];
+				volumeEQ.masterVolume = byteArrayToInt(readBytes(4));
+				volumeEQ.unknownData = byteArrayToInt(readBytes(4));
+				volumeEQ._32Hz = readChar();
+				volumeEQ._60Hz = readChar();
+				volumeEQ._125Hz = readChar();
+				volumeEQ._250Hz = readChar();
+				volumeEQ._500Hz = readChar();
+				volumeEQ._1KHz = readChar();
+				volumeEQ._2KHz = readChar();
+				volumeEQ._4KHz = readChar();
+				volumeEQ._8KHz = readChar();
+				volumeEQ._16KHz = readChar();
+				volumeEQ.overallGain = readChar();
 			}
 			
 			// !PAGE SETUP (only if the major file version is >= 5):
 			if(version >= 5) {
 				pageSetup = new PageSetup();
-				pageSetup.pageFormatLength = byteArrayToInt(toBytes(readChars(4)));
-				pageSetup.pageFormatWidth = byteArrayToInt(toBytes(readChars(4)));
-				pageSetup.leftMargin = byteArrayToInt(toBytes(readChars(4)));
-				pageSetup.rightMargin = byteArrayToInt(toBytes(readChars(4)));
-				pageSetup.topMargin = byteArrayToInt(toBytes(readChars(4)));
-				pageSetup.bottomMargin = byteArrayToInt(toBytes(readChars(4)));
-				pageSetup.scoreSize = byteArrayToInt(toBytes(readChars(4)));
-				pageSetup.enabledHeaderFooterFieldsBitmask = byteArrayToInt(toBytes(readChars(2))); 
+				pageSetup.pageFormatLength = byteArrayToInt(readBytes(4));
+				pageSetup.pageFormatWidth = byteArrayToInt(readBytes(4));
+				pageSetup.leftMargin = byteArrayToInt(readBytes(4));
+				pageSetup.rightMargin = byteArrayToInt(readBytes(4));
+				pageSetup.topMargin = byteArrayToInt(readBytes(4));
+				pageSetup.bottomMargin = byteArrayToInt(readBytes(4));
+				pageSetup.scoreSize = byteArrayToInt(readBytes(4));
+				pageSetup.enabledHeaderFooterFieldsBitmask = byteArrayToInt(readBytes(2)); 
 				pageSetup.titleHeaderFooter = getContent41x();
 				pageSetup.subtitleHeaderFooter = getContent41x();
 				pageSetup.artistHeaderFooter = getContent41x();
@@ -529,6 +554,7 @@ public class GpFile {
 				pageSetup.copyrightHeaderFooter[0] = getContent41x();
 				pageSetup.copyrightHeaderFooter[1] = getContent41x();
 				pageSetup.pageNumberHeaderFooter = getContent41x();
+				
 			}
 			
 			// !Tempo string (only if the file version is >= 5.0):
@@ -537,78 +563,75 @@ public class GpFile {
 				songData = getContent41x();
 			}
 			
-			bpm = byteArrayToInt(toBytes(readChars(4)));
+			bpm = byteArrayToInt(readBytes(4));
 			
 			// !UNINTERESTING DATA/PADDING (if the file version is > 5.0)
 			if(version > 5) {
-				uninterestingData = readChars(1)[0];
+				uninterestingData = readChar();
 			}
 			
 			// !KEY/OCTAVE INFORMATION (if the major file version is >= 4)
 			if(version >= 4) {
 				keyOctaveInfo = new KeyOctaveInfo();
-				keyOctaveInfo.key = readChars(1)[0];
+				keyOctaveInfo.key = readChar();
 				
-				keyOctaveInfo.unknownData = byteArrayToInt(toBytes(readChars(3)));
-				keyOctaveInfo.octave = readChars(1)[0];
+				keyOctaveInfo.unknownData = byteArrayToInt(readBytes(3));
+				keyOctaveInfo.octave = readChar();
 			}
 			
 			// !KEY INFORMATION (if the major file version is < 4)
 			if(version < 4) {
 				keyInfo = new KeyInfo();
-				keyInfo.key = byteArrayToInt(toBytes(readChars(4)));
+				keyInfo.key = byteArrayToInt(readBytes(4));
 			}
 			// TrackData
 			trackData = new TrackData[64];
 			for(int i=0;i<64;i++) {
 				trackData[i] = new TrackData();
-				trackData[i].instrumentPatchNumber = byteArrayToInt(toBytes(readChars(4)));
-				trackData[i].volume = readChars(1)[0];
-				trackData[i].pan = readChars(1)[0];
-				trackData[i].chorus = readChars(1)[0];
-				trackData[i].reverb = readChars(1)[0];
-				trackData[i].phaser = readChars(1)[0];
-				trackData[i].tremolo = readChars(1)[0];
-				readChars(2);
+				trackData[i].instrumentPatchNumber = byteArrayToInt(readBytes(4));
+				trackData[i].volume = readChar();
+				trackData[i].pan = readChar();
+				trackData[i].chorus = readChar();
+				trackData[i].reverb = readChar();
+				trackData[i].phaser = readChar();
+				trackData[i].tremolo = readChar();
+				readBytes(2);
 			}
 			
 			// 으아아아아아아아아아아아아앙ㅇ아아아아아아아아아아ㅏㅏ아ㅓ미나어ㅣㅏㅓ지ㅏㅓ
 			
-			
 			// !MUSICAL DIRECTIONS DEFINITIONS (if the major file version is >= 5) (38 bytes):
 			if(version >= 5) {
 				musicalDirectionsDefinitions = new MusicalDirectionsDefinitions();
-				musicalDirectionsDefinitions.coda = byteArrayToInt(toBytes(readChars(2)));
-				musicalDirectionsDefinitions.doubleCoda = byteArrayToInt(toBytes(readChars(2)));
-				musicalDirectionsDefinitions.segno = byteArrayToInt(toBytes(readChars(2)));
-				musicalDirectionsDefinitions.segnoSegno= byteArrayToInt(toBytes(readChars(2)));
-				musicalDirectionsDefinitions.fine = byteArrayToInt(toBytes(readChars(2)));
-				musicalDirectionsDefinitions.daCapo = byteArrayToInt(toBytes(readChars(2)));
-				musicalDirectionsDefinitions.daCapoAlCoda = byteArrayToInt(toBytes(readChars(2)));
-				musicalDirectionsDefinitions.daCapoAlDoubleCoda = byteArrayToInt(toBytes(readChars(2)));
-				musicalDirectionsDefinitions.daCapoAlFine = byteArrayToInt(toBytes(readChars(2)));
-				musicalDirectionsDefinitions.daSegno = byteArrayToInt(toBytes(readChars(2)));
-				musicalDirectionsDefinitions.daSegnoAlCoda = byteArrayToInt(toBytes(readChars(2)));
-				musicalDirectionsDefinitions.daSegnoAlDoubleCoda = byteArrayToInt(toBytes(readChars(2)));
-				musicalDirectionsDefinitions.daSegnoAlFine = byteArrayToInt(toBytes(readChars(2)));
-				musicalDirectionsDefinitions.daSegnoSegno = byteArrayToInt(toBytes(readChars(2)));
-				musicalDirectionsDefinitions.daSegnoSegnoAlCoda = byteArrayToInt(toBytes(readChars(2)));
-				musicalDirectionsDefinitions.daSegnoSegnoAlDoubleCoda = byteArrayToInt(toBytes(readChars(2)));
-				musicalDirectionsDefinitions.daSegnoSegnoAlFine = byteArrayToInt(toBytes(readChars(2)));
-				musicalDirectionsDefinitions.daCoda = byteArrayToInt(toBytes(readChars(2)));
-				musicalDirectionsDefinitions.daDoubleCoda = byteArrayToInt(toBytes(readChars(2)));
+				musicalDirectionsDefinitions.coda = byteArrayToInt(readBytes(2));
+				musicalDirectionsDefinitions.doubleCoda = byteArrayToInt(readBytes(2));
+				musicalDirectionsDefinitions.segno = byteArrayToInt(readBytes(2));
+				musicalDirectionsDefinitions.segnoSegno= byteArrayToInt(readBytes(2));
+				musicalDirectionsDefinitions.fine = byteArrayToInt(readBytes(2));
+				musicalDirectionsDefinitions.daCapo = byteArrayToInt(readBytes(2));
+				musicalDirectionsDefinitions.daCapoAlCoda = byteArrayToInt(readBytes(2));
+				musicalDirectionsDefinitions.daCapoAlDoubleCoda = byteArrayToInt(readBytes(2));
+				musicalDirectionsDefinitions.daCapoAlFine = byteArrayToInt(readBytes(2));
+				musicalDirectionsDefinitions.daSegno = byteArrayToInt(readBytes(2));
+				musicalDirectionsDefinitions.daSegnoAlCoda = byteArrayToInt(readBytes(2));
+				musicalDirectionsDefinitions.daSegnoAlDoubleCoda = byteArrayToInt(readBytes(2));
+				musicalDirectionsDefinitions.daSegnoAlFine = byteArrayToInt(readBytes(2));
+				musicalDirectionsDefinitions.daSegnoSegno = byteArrayToInt(readBytes(2));
+				musicalDirectionsDefinitions.daSegnoSegnoAlCoda = byteArrayToInt(readBytes(2));
+				musicalDirectionsDefinitions.daSegnoSegnoAlDoubleCoda = byteArrayToInt(readBytes(2));
+				musicalDirectionsDefinitions.daSegnoSegnoAlFine = byteArrayToInt(readBytes(2));
+				musicalDirectionsDefinitions.daCoda = byteArrayToInt(readBytes(2));
+				musicalDirectionsDefinitions.daDoubleCoda = byteArrayToInt(readBytes(2));
 				
 			}
 			
 			// !MASTER REVERB SETTING (if the major file version is >= 5):
 			if(version >= 5) {
-				masterReverb = byteArrayToInt(toBytes(readChars(4)));
+				masterReverb = byteArrayToInt(readBytes(4));
 			}
 			
-			
-			bars = byteArrayToInt(toBytes(readChars(4)));
-			tracks = byteArrayToInt(toBytes(readChars(4)));
-			
+			bars = byteArrayToInt(readBytes(4));
+			tracks = byteArrayToInt(readBytes(4));
 			
 			barChunk = new BarChunk[bars];
 			
@@ -627,10 +650,9 @@ public class GpFile {
 				Bit 7 (MSB):	Double bar 
 				*/
 				barChunk[i] = new BarChunk();
-				barChunk[i].barBitmask = readChars(1)[0];
-				
-				
-				
+				barChunk[i].barBitmask = readChar();
+				System.out.println(barChunk[i].barBitmask+" "+toBinary(barChunk[i].barBitmask,8));
+				//System.out.println(barChunk[i].barBitmask+" "+Integer.toBinaryString(barChunk[i].barBitmask));
 			}
 			
 		} catch (FileNotFoundException e) {
@@ -638,6 +660,22 @@ public class GpFile {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
+	}
+	public String toBinary(int b, int length) {
+		StringBuilder sb = new StringBuilder();
+		String binaryStr = Integer.toBinaryString(b);
+		if(binaryStr.length() < length) {
+			for(int i=0;i<length-binaryStr.length();i++) {
+				sb.append("0");
+			}
+			sb.append(binaryStr);
+			return sb.toString();
+		}
+		else {
+			return binaryStr;
+		}
+		
+		
 	}
 	public void printHeader() {
 		System.out.println(version);
@@ -663,8 +701,8 @@ public class GpFile {
 	}
 	public static void main(String[] args) {
 		//File f = new File("d:\\ehehflrkd.gp5");
-		File f = new File("d:\\Jason Mraz - I'm Yours.gp5");
-		
+		//File f = new File("d:\\Jason Mraz - I'm Yours.gp5");
+		File f = new File("F:\\Bandscores(GP)\\이적_-_하늘을달리다-1212zxc.gp5");
 		
 		GpFile gp = new GpFile(f);
 		//gp.printHeader();
@@ -697,7 +735,9 @@ public class GpFile {
 	    Arrays.fill(byteBuffer.array(), (byte) 0); // clear sensitive data
 	    return bytes;
 	}
-	
+	public void printField(Field f) {
+		System.out.println(f.fieldLength + " " + f.stringLength + " " +f.string);
+	}
 }
 
 	
