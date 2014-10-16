@@ -10,6 +10,7 @@ import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
 import java.nio.charset.Charset;
+import java.util.ArrayList;
 import java.util.Arrays;
 
 class Version {
@@ -234,13 +235,14 @@ class BarChunk {
 		[1 byte]:	Unknown data/padding (set to 0x0)
 	*/ 
 	int barBitmask;
+	String barBitmaskStr;
 	int tsNumerator;
 	int tsDenominator;
 	Field sectionName;
-	int sectionNameWith;
+	byte[] sectionNameWith;
 	int key;
 	int isMinor;
-	int beamEightNotesByValues;
+	byte[] beamEightNotesByValues;
 	int endOfRepeat;
 	int numberOfAlternateEnding;
 	int tripletFeel;
@@ -272,16 +274,18 @@ class TrackChunk {
 			[41 bytes]:	Unknown
 	 */
 
-	int barBitmask;
+	int trackBitmask;
+	String trackBitmaskStr;
 	int trackNameLength;
 	String trackName;
 	int numberOfStrings;
-	int stringTuningChunk;
+	int[] stringTuningChunk;
 	int midiPortUsed;
 	int midiChannelUsed;
 	int midiChannelUsedForEffects;
 	int numberOfFrets;
-	int trackColor;
+	byte[] trackColor;
+	int capoFret;
 	TrackSettings trackSettings;
 	int unknownPadding;
 }
@@ -314,9 +318,9 @@ class TrackSettings {
 	int midiBank;
 	int humanPlaying;
 	int autoAccentuationOnTheBeat;
-	int unknown2;
+	byte[] unknown2;
 	int selectedSoundBankOption;
-	int unknown3;
+	byte[] unknown3;
 	int lowFrequency;
 	int midFrequency;
 	int highFrequency;
@@ -324,6 +328,202 @@ class TrackSettings {
 	Field instrumentEffect1;
 	Field instrumentEffect2;
 }
+
+class BeatChunk {
+	//!BEAT CHUNK, for each measure:
+	//for each track (if the file major version is >= 5, this data is given twice, once for each "voice"):
+	BeatChunkTrack[] beatChunkTrack;
+}
+class BeatChunkTrack {
+	VoiceChunk[] voicChunk;
+}
+
+class VoiceChunk {
+	int numberOfBeats;
+	BeatSubChunk[] beatSubChunk;
+}
+
+class BeatSubChunk {
+	int beatBitmask;
+	int restType;
+	int beatDuration;
+	int nTuplet;
+	//!CHORD DIAGRAM (if the beat bitmask declares that a chord diagram is present):
+	ChordDiagram0 chordDiagram0;
+	ChordDiagram1 chordDiagram1;
+	int chordDiagramFormat;
+	Field beatText;
+	EffectsPresent effectsPresent;
+	MixTableChange mixTableChange;
+	int usedStringMask;
+	StringChunk stringChunk;
+	int noteTransposeBitmask;
+}
+
+class StringChunk {
+	/*
+	!STRING CHUNK, for each populated string (starting with the lowest numbered string, ie. high e):
+		[1 byte]:	Note bitmask (defined in notes section)
+		!NOTE TYPE (if the note bitmask declares this)
+			[1 byte]:	Note type (1 = normal, 2 = tie, 3 = dead)
+		!TIME INDEPENDENT DURATION (if the note bitmask declares this)
+			[1 byte]:	Duration (-2 = whole note, -1 = half note, 0 = quarter note, 1 = eighth note, 2 = sixteenth note, 3 = thirty-second note, etc.)
+			[1 byte]:	N-tuplet (ie. 3 for a triplet)
+		!NOTE DYNAMIC (if the note bitmask declares this)
+			[1 byte]:	How soft/strong the note is played ranging from pianissimo possibile (ppp, value of 1) to fortissimo possibile (fff, value of 8): ppp, pp, p, mp, mf, f, ff, fff
+					(If the note dynamic is not defined, a value of 6, forte, is assumed)
+		[1 byte]:	Fret number
+		!RIGHT/LEFT HAND FINGERING (if the note bitmask declares this)
+			[1 byte]:	Left hand fingering associated with this note (-1 = nothing, 0 = thumb, 1 = index, 2 = middle, 3 = ring, 4 = pinky)
+			[1 byte]:	Right hand fingering associated with this note (-1 = nothing, 0 = thumb, 1 = index, 2 = middle, 3 = ring, 4 = pinky)
+?					!UNKNOWN DATA/PADDING (if the file version is >= 5.0) (note:  This byte is verified to not be in 3.x/4.x version GP files)
+			[1 byte]:	Unknown/padding	
+		!NOTE EFFECT (if the note bitmask declares this)
+			[1 byte]:	Note effect 1 bitmask (defined in notes section)
+			!NOTE EFFECT 2 BITMASK (if the file version is >= 4.0)
+				[1 byte]:	Note effect 2 bitmask (defined in notes section)
+			!BEND (if the note effect 1 bitmask defines this)
+				[varies]:	BEND CHUNK
+			!GRACE NOTE (if the note effect 1 bitmask defines this)
+				[1 byte]:	The grace note's fret number
+				[1 byte]:	The dynamic of the grace note ranging from pianissimo possibile (ppp, value of 1) to fortissimo possibile (fff, value of 8): ppp, pp, p, mp, mf, f, ff, fff
+						(If the dynamic is not defined, a value of 6, forte, is assumed)
+				[1 byte]:	The grace note's transition type (0 = none, 1 = slide, 2 = bend, 3 = hammer)
+				[1 byte]:	Duration of the grace note (3 = 16th note, 2 = 24th note, 1 = 32nd note)
+			!TREMOLO PICKING (if the note effect 2 bitmask defines this)
+				[1 byte]:	Picking speed (3 = 32nd note, 2 = 16th note, 1 = 8th note)
+			!SLIDE (if the note effect 2 bitmask defines this)
+				[1 byte]:	Slide type (-2 = slide into from above, -1 = slide into from below, 0 = no slide, 1 = shift slide, 2 = legato slide, 3 = slide out of downwards, 4 = slide out of upwards)
+			!HARMONIC (if the note effect 2 bitmask defines this)
+				[1 byte]:	Harmonic type (0 = none, 1 = Natural, 15 = Artificial+5, 17 = Artificial+7, 22 = Artificial+12, 3 = Tapped, 4 = Pitch, 5 = Semi)
+			!TRILL (if the note effect 2 bitmask defines this)
+				[1 byte]:	The fret being trilled with
+				[1 byte]:	The period between each of the two trilled notes (0 = 4th note, 1 = 8th note, 2 = 16th note)
+
+	*/
+	int noteBitmask;
+	int noteType;
+	int duration;
+	int nTuplet;
+	int dynamicity;
+	int fretNumber;
+	int leftHaneFingering;
+	int rightHandFingering;
+	byte[] unknown;
+	int noteEffect1Bitmask;
+	int noteEffect2Bitmask;
+	byte[] bendChunk;
+	int graceNoteFret;
+	int grateNoteDynamicity;
+	int graceNoteTransitionType;
+	int graceNoteDuration;
+	int tremoloPickingSpeed;
+	int slideType;
+	int harmonicType;
+	int trillFret;
+	int trillPeriod;
+}
+
+class MixTableChange {
+	int numberOfNewInstrument;
+	int rseNumber1;
+	int rseNumber2;
+	int rseNumber3;
+	byte[] unknown;
+	int newVolume;
+	int newPanValue;
+	int newChorusValue;
+	int newReverbValue;
+	int newPhaserValue;
+	int newTremoloValue;
+	Field tempoStringData;
+	int newTempo;
+	int volumeChange;
+	int panChange;
+	int reverbChange;
+	int chorusChange;
+	int phaserChange;
+	int tremoloChange;
+	int tempoChange;
+	int isTempoTextStringHidden;
+	int mixTableAppliedTracksBitmask;
+	byte[] unknown2;
+	Field rseEffect2;
+	Field rseEffect1;
+}
+
+class EffectsPresent {
+	int beatEffectsBitmask;
+	int extendedBeatEffectsBitmask;
+	int tappingPoppingSlappingStatus;
+	int tremoloStatus;
+	int strokeEffect;
+	int pickStrokeEffect;
+	BendChunk bendChunk;
+	int downstrokeSpeed;
+	int upstrokeSpeed;
+	int pickstrokeSpeed;
+}
+
+class ChordDiagram0 {
+	Field chordNameString;
+	
+	int beginFret;
+	/*
+	FRET CHUNK, definitions for each of the track's defined strings (not padded to 7 strings), starting with the lowest numbered string, ie. high e (-1 = not played, 0 = played open):
+		For each of the track's strings
+		[4 bytes]:	The fret number at which this string is being pressed
+	...(repeated data)... 
+	*/
+	int[] pressedFret;
+}
+class ChordDiagram1 {
+	int displaySharpInsteadFlat;
+	int chordRoot;
+	byte[] unkonwn;
+	int chordType;
+	byte[] unknown2;
+	int option;
+	byte[] unknown3;
+	int lowestNotePlayedInTheChord;
+	int plusminusOption;
+	byte[] unknown4;
+	int chordNameStringLength;
+	String chordName;
+	int tonalityOfTheFifth;
+	byte[] unknown5;
+	int tonalityOfTheNinth;
+	byte[] unknown6;
+	int tonalityOfTheEleventh;
+	byte[] unknown7;
+	int chordDiagramBaseFretPosition;
+	int[] fretChunk;
+	int numberOfBarresInTheChord;
+	int[] barrPosition;
+	int[] barrFirstString;
+	int[] barrLastString;
+	int includeFirstInterval;
+	int includeThirdInterval;
+	int includeFifthInterval;
+	int includeSeventhInterval;
+	int includeNinthInterval;
+	int includeEleventhInterval;
+	int includeThirteenInterval;
+	int[] fingeringChunk;
+	int isChordFingeringDisplayed;
+}
+class BendChunk {
+	int bendType;
+	int bendHeight;
+	int numberOfBendPoints;
+	BendPointChunk[] bendPointChunk;
+}
+class BendPointChunk {
+	int absoluteTimePosition;
+	int verticalPosition;
+	int vibratoType;
+}
+
 
 public class GpFile {
 	float version;
@@ -353,6 +553,7 @@ public class GpFile {
 	int tracks;
 	BarChunk[] barChunk;
 	TrackChunk[] trackChunk;
+	ArrayList<BeatChunk> beatChunkList;
 	
 	BufferedReader br;
 	FileInputStream fis;
@@ -376,7 +577,6 @@ public class GpFile {
 		byte[] bytes = new byte[characters];
 		
 		try {
-			
 			fis.read(bytes,0,characters);
 			readCount+=characters;
 			
@@ -385,6 +585,9 @@ public class GpFile {
 		}
 		
 		return bytes;
+	}
+	public int readInt(int characters) {
+		return byteArrayToInt(readBytes(characters));
 	}
 	
 	public Field getContent41x() {
@@ -487,7 +690,7 @@ public class GpFile {
 			copyright = getContent41x();
 			tab = getContent41x();
 			instructions = getContent41x();
-			tmpInt = byteArrayToInt(readBytes(4));
+			tmpInt = readInt(4);
 			notices = new Field[tmpInt];
 
 			for(int i=0;i<tmpInt;i++) {
@@ -500,23 +703,22 @@ public class GpFile {
 				lyrics = new Lyrics[5];
 				for(int i=0;i<5;i++) {
 					lyrics[i] = new Lyrics();
-					lyrics[i].associatedTrack = byteArrayToInt(readBytes(4));
-					lyrics[i].startFrom = byteArrayToInt(readBytes(4));
+					lyrics[i].associatedTrack = readInt(4);
+					lyrics[i].startFrom = readInt(4);
 					if(lyrics[i].startFrom != 0) {
-						lyrics[i].lyricLength = byteArrayToInt(readBytes(4));
+						lyrics[i].lyricLength = readInt(4);
 						lyrics[i].string = new String(readBytes(lyrics[i].lyricLength), encoding);
 					}
 					else {
 					}
 				}
-				
 			}
 			
 			// !VOLUME/EQUALIZATION SETTINGS (only if the major file version is > 5)
 			if(version > 5) {
 				volumeEQ = new VolumeEQ();
-				volumeEQ.masterVolume = byteArrayToInt(readBytes(4));
-				volumeEQ.unknownData = byteArrayToInt(readBytes(4));
+				volumeEQ.masterVolume = readInt(4);
+				volumeEQ.unknownData = readInt(4);
 				volumeEQ._32Hz = readChar();
 				volumeEQ._60Hz = readChar();
 				volumeEQ._125Hz = readChar();
@@ -533,13 +735,13 @@ public class GpFile {
 			// !PAGE SETUP (only if the major file version is >= 5):
 			if(version >= 5) {
 				pageSetup = new PageSetup();
-				pageSetup.pageFormatLength = byteArrayToInt(readBytes(4));
-				pageSetup.pageFormatWidth = byteArrayToInt(readBytes(4));
-				pageSetup.leftMargin = byteArrayToInt(readBytes(4));
-				pageSetup.rightMargin = byteArrayToInt(readBytes(4));
-				pageSetup.topMargin = byteArrayToInt(readBytes(4));
-				pageSetup.bottomMargin = byteArrayToInt(readBytes(4));
-				pageSetup.scoreSize = byteArrayToInt(readBytes(4));
+				pageSetup.pageFormatLength = readInt(4);
+				pageSetup.pageFormatWidth = readInt(4);
+				pageSetup.leftMargin = readInt(4);
+				pageSetup.rightMargin = readInt(4);
+				pageSetup.topMargin = readInt(4);
+				pageSetup.bottomMargin = readInt(4);
+				pageSetup.scoreSize = readInt(4);
 				pageSetup.enabledHeaderFooterFieldsBitmask = byteArrayToInt(readBytes(2)); 
 				pageSetup.titleHeaderFooter = getContent41x();
 				pageSetup.subtitleHeaderFooter = getContent41x();
@@ -554,7 +756,6 @@ public class GpFile {
 				pageSetup.copyrightHeaderFooter[0] = getContent41x();
 				pageSetup.copyrightHeaderFooter[1] = getContent41x();
 				pageSetup.pageNumberHeaderFooter = getContent41x();
-				
 			}
 			
 			// !Tempo string (only if the file version is >= 5.0):
@@ -563,7 +764,7 @@ public class GpFile {
 				songData = getContent41x();
 			}
 			
-			bpm = byteArrayToInt(readBytes(4));
+			bpm = readInt(4);
 			
 			// !UNINTERESTING DATA/PADDING (if the file version is > 5.0)
 			if(version > 5) {
@@ -582,13 +783,13 @@ public class GpFile {
 			// !KEY INFORMATION (if the major file version is < 4)
 			if(version < 4) {
 				keyInfo = new KeyInfo();
-				keyInfo.key = byteArrayToInt(readBytes(4));
+				keyInfo.key = readInt(4);
 			}
 			// TrackData
 			trackData = new TrackData[64];
 			for(int i=0;i<64;i++) {
 				trackData[i] = new TrackData();
-				trackData[i].instrumentPatchNumber = byteArrayToInt(readBytes(4));
+				trackData[i].instrumentPatchNumber = readInt(4);
 				trackData[i].volume = readChar();
 				trackData[i].pan = readChar();
 				trackData[i].chorus = readChar();
@@ -597,8 +798,6 @@ public class GpFile {
 				trackData[i].tremolo = readChar();
 				readBytes(2);
 			}
-			
-			// 으아아아아아아아아아아아아앙ㅇ아아아아아아아아아아ㅏㅏ아ㅓ미나어ㅣㅏㅓ지ㅏㅓ
 			
 			// !MUSICAL DIRECTIONS DEFINITIONS (if the major file version is >= 5) (38 bytes):
 			if(version >= 5) {
@@ -622,16 +821,15 @@ public class GpFile {
 				musicalDirectionsDefinitions.daSegnoSegnoAlFine = byteArrayToInt(readBytes(2));
 				musicalDirectionsDefinitions.daCoda = byteArrayToInt(readBytes(2));
 				musicalDirectionsDefinitions.daDoubleCoda = byteArrayToInt(readBytes(2));
-				
 			}
 			
 			// !MASTER REVERB SETTING (if the major file version is >= 5):
 			if(version >= 5) {
-				masterReverb = byteArrayToInt(readBytes(4));
+				masterReverb = readInt(4);
 			}
 			
-			bars = byteArrayToInt(readBytes(4));
-			tracks = byteArrayToInt(readBytes(4));
+			bars = readInt(4);
+			tracks = readInt(4);
 			
 			barChunk = new BarChunk[bars];
 			
@@ -651,9 +849,280 @@ public class GpFile {
 				*/
 				barChunk[i] = new BarChunk();
 				barChunk[i].barBitmask = readChar();
-				System.out.println(barChunk[i].barBitmask+" "+toBinary(barChunk[i].barBitmask,8));
-				//System.out.println(barChunk[i].barBitmask+" "+Integer.toBinaryString(barChunk[i].barBitmask));
+				barChunk[i].barBitmaskStr = toBinary(barChunk[i].barBitmask,8);
+				if(barChunk[i].barBitmaskStr.charAt(7) == '1') {
+					barChunk[i].tsNumerator = readChar();
+				}
+				if(barChunk[i].barBitmaskStr.charAt(6) == '1') {
+					barChunk[i].tsDenominator = readChar();
+				}
+				if(barChunk[i].barBitmaskStr.charAt(2) == '1') {
+					barChunk[i].sectionName = getContent41x();
+					barChunk[i].sectionNameWith = readBytes(4);
+				}
+				if(barChunk[i].barBitmaskStr.charAt(1) == '1') {
+					barChunk[i].key = readChar();
+					barChunk[i].isMinor = readChar();
+				}
+				if(barChunk[i].barBitmaskStr.charAt(7) == '1' && barChunk[i].barBitmaskStr.charAt(6) == '1') {
+					barChunk[i].beamEightNotesByValues = readBytes(4);
+				}
+				if(barChunk[i].barBitmaskStr.charAt(4) == '1') {
+					barChunk[i].endOfRepeat = readChar();
+				}
+				if(barChunk[i].barBitmaskStr.charAt(3) == '1') {
+					barChunk[i].numberOfAlternateEnding = readChar();
+				}
+				if(version >= 5) {
+					readChar();
+					barChunk[i].tripletFeel = readChar();
+					readChar();
+				}
 			}
+			for(int i=0;i<tracks;i++) {
+				/*
+				Bit 0 (LSB):	Drums track
+				Bit 1:		12 stringed guitar track
+				Bit 2:		Banjo track
+				Bit 3:		Unknown
+				Bit 4:		Marked for solo playback
+				Bit 5:		Marked for muted playback
+				Bit 6:		Use RSE playback (track instrument option)
+				Bit 7:		Indicate tuning on the score (track properties)
+				*/ 
+				trackChunk[i] = new TrackChunk();
+				trackChunk[i].trackBitmask = readChar();
+				trackChunk[i].trackBitmaskStr = toBinary(trackChunk[i].trackBitmask,8);
+				trackChunk[i].trackNameLength = readChar();
+				trackChunk[i].trackName = new String(readBytes(trackChunk[i].trackNameLength), encoding);
+				readBytes(40-trackChunk[i].trackNameLength);
+				trackChunk[i].numberOfStrings = readInt(4);
+				trackChunk[i].stringTuningChunk = new int[7];
+				for(int j=0;j<7;j++) {
+					trackChunk[i].stringTuningChunk[j] = readInt(4);
+				}
+				trackChunk[i].midiPortUsed = readInt(4);
+				trackChunk[i].midiChannelUsed = readInt(4);
+				trackChunk[i].midiChannelUsedForEffects = readInt(4);
+				trackChunk[i].numberOfFrets = readInt(4);
+				trackChunk[i].capoFret = readInt(4);
+				trackChunk[i].trackColor = readBytes(4);
+				if(version > 5) {
+					trackChunk[i].trackSettings = new TrackSettings();
+					trackChunk[i].trackSettings.bitmask1 = readChar();
+					trackChunk[i].trackSettings.bitmask2 = readChar();
+					trackChunk[i].trackSettings.unknown = readChar();
+					trackChunk[i].trackSettings.midiBank = readChar();
+					trackChunk[i].trackSettings.humanPlaying = readChar();
+					trackChunk[i].trackSettings.autoAccentuationOnTheBeat = readChar();
+					trackChunk[i].trackSettings.unknown2 = readBytes(31);
+					trackChunk[i].trackSettings.selectedSoundBankOption = readChar();
+					trackChunk[i].trackSettings.unknown3 = readBytes(7);
+					trackChunk[i].trackSettings.lowFrequency = readChar();
+					trackChunk[i].trackSettings.midFrequency = readChar();
+					trackChunk[i].trackSettings.highFrequency = readChar();
+					trackChunk[i].trackSettings.allFrequencies = readChar();
+					trackChunk[i].trackSettings.instrumentEffect1 = getContent41x();
+					System.out.println(trackChunk[i].trackSettings.instrumentEffect1.string);
+					trackChunk[i].trackSettings.instrumentEffect2 = getContent41x();
+				}
+				if(version == 5) {
+					readBytes(41);
+				}
+			}
+			if(version >= 5) {
+				readChar();
+			}
+			// BEAT CHUNK
+			BeatChunk beatChunk = new BeatChunk();
+			beatChunk.beatChunkTrack = new BeatChunkTrack[tracks];
+			
+			int voices = (version >= 5) ? 2: 1;
+			
+			for(int i=0;i<tracks;i++) {
+				beatChunk.beatChunkTrack[i].voicChunk = new VoiceChunk[voices];
+				for(int j=0;j<voices;j++) {
+					beatChunk.beatChunkTrack[i].voicChunk[j] = new VoiceChunk();
+					beatChunk.beatChunkTrack[i].voicChunk[j].numberOfBeats = readInt(4);
+					for(int k=0;k<beatChunk.beatChunkTrack[i].voicChunk[j].numberOfBeats;k++) {
+						beatChunk.beatChunkTrack[i].voicChunk[j].beatSubChunk[k] = new BeatSubChunk();
+						BeatSubChunk b = beatChunk.beatChunkTrack[i].voicChunk[j].beatSubChunk[k];
+						/*
+							Bit 0 (LSB):	Dotted notes?
+							Bit 1:		Chord diagram present
+							Bit 2:		Text present
+							Bit 3:		Beat effects present
+							Bit 4:		Mix table change present
+							Bit 5:		This beat is an N-tuplet
+							Bit 6:		Is a rest beat
+							Bit 7 (MSB):	Unused (set to 0)
+						*/ 
+						b.beatBitmask = readChar();
+						String beatBitmaskString = toBinary(b.beatBitmask, 8);
+						if(beatBitmaskString.charAt(1) == '1') {
+							b.restType = readChar();
+						}
+						b.beatDuration = readChar();
+						if(beatBitmaskString.charAt(2) == '1') {
+							b.nTuplet = readInt(4);
+						}
+						if(beatBitmaskString.charAt(6) == '1') {
+							b.chordDiagramFormat = readChar();
+							// !CHORD DIAGRAM FORMAT 0 (if the format identifier was 0, ie. GP3 format):
+							if(b.chordDiagramFormat == 0) {
+								b.chordDiagram0 = new ChordDiagram0();
+								b.chordDiagram0.chordNameString = getContent41x();
+								b.chordDiagram0.beginFret = readInt(4);
+								b.chordDiagram0.pressedFret = new int[trackChunk[i].numberOfStrings];
+								for(int l=0;l<trackChunk[i].numberOfStrings;l++) {
+									b.chordDiagram0.pressedFret[l] = readInt(4);
+								}
+							}
+							// !CHORD DIAGRAM FORMAT 1 (if the format identifier was 1, ie. GP4 format) (105 bytes):
+							if(b.chordDiagramFormat == 1) {
+								b.chordDiagram1 = new ChordDiagram1();
+								b.chordDiagram1.displaySharpInsteadFlat = readChar();
+								readBytes(3);
+								b.chordDiagram1.chordRoot = readChar();
+								b.chordDiagram1.unkonwn = readBytes(3);
+								b.chordDiagram1.chordType = readChar();
+								b.chordDiagram1.unknown2 = readBytes(3);
+								b.chordDiagram1.option = readChar();
+								b.chordDiagram1.unknown2 = readBytes(3);
+								b.chordDiagram1.lowestNotePlayedInTheChord = readInt(4);
+								b.chordDiagram1.plusminusOption = readChar();
+								b.chordDiagram1.unknown3 = readBytes(4);
+								b.chordDiagram1.chordNameStringLength = readChar();
+								b.chordDiagram1.chordName = new String(readBytes(b.chordDiagram1.chordNameStringLength),encoding);
+								readBytes(20-b.chordDiagram1.chordNameStringLength);
+								readBytes(2);
+								b.chordDiagram1.tonalityOfTheFifth = readChar();
+								readBytes(3);
+								b.chordDiagram1.tonalityOfTheNinth = readChar();
+								readBytes(3);
+								b.chordDiagram1.tonalityOfTheEleventh = readChar();
+								readBytes(3);
+								b.chordDiagram1.chordDiagramBaseFretPosition = readInt(4);
+								b.chordDiagram1.fretChunk = new int[7];
+								for(int l=0;l<7;l++) {
+									b.chordDiagram1.fretChunk[l] = readInt(4);
+								}
+								b.chordDiagram1.numberOfBarresInTheChord = readChar();
+								b.chordDiagram1.barrPosition = new int[5];
+								for(int l=0;l<5;l++) {
+									b.chordDiagram1.barrPosition[l] = readChar();
+								}
+								b.chordDiagram1.barrFirstString = new int[5];
+								for(int l=0;l<5;l++) {
+									b.chordDiagram1.barrFirstString[l] = readChar();
+								}
+								b.chordDiagram1.barrLastString = new int[5];
+								for(int l=0;l<5;l++) {
+									b.chordDiagram1.barrLastString[l] = readChar();
+								}
+								b.chordDiagram1.includeFirstInterval = readChar();
+								b.chordDiagram1.includeThirdInterval = readChar();
+								b.chordDiagram1.includeFifthInterval = readChar();
+								b.chordDiagram1.includeSeventhInterval = readChar();
+								b.chordDiagram1.includeNinthInterval = readChar();
+								b.chordDiagram1.includeEleventhInterval = readChar();
+								readChar();
+								
+								b.chordDiagram1.fingeringChunk = new int[7];
+								for(int l=0;l<7;l++) {
+									b.chordDiagram1.fingeringChunk[l] = readChar();
+								}
+								b.chordDiagram1.isChordFingeringDisplayed = readChar();
+							}
+						}
+						if(beatBitmaskString.charAt(5) == '1') {
+							b.beatText = getContent41x();
+						}
+						if(beatBitmaskString.charAt(4) == '1') {
+							/*
+							Byte 1
+							 Bits 0 (LSB) - 4:	Unknown
+							 Bit 5:			Tapping, popping or slapping effect
+							 Bit 6:			Stroke effect
+							 Bit 7 (MSB):		Unused (set to 0)
+							Byte 2 (extended beat effects, only if the major file version is >= 4):
+							 Bit 0 (LSB):		Rasguedo
+							 Bit 1:			Pickstroke
+							 Bit 2:			Tremolo bar
+							 Bits 3 - 7:		Unused (set to 0)
+							*/
+							
+							b.effectsPresent = new EffectsPresent();
+							b.effectsPresent.beatEffectsBitmask = readChar();
+							String beatEffectsBitmaskString = toBinary(b.effectsPresent.beatEffectsBitmask,8);
+							String extendedEffectsBitmaskString = null;
+							if(version >= 4) {
+								b.effectsPresent.extendedBeatEffectsBitmask = readChar();
+								extendedEffectsBitmaskString = toBinary(b.effectsPresent.extendedBeatEffectsBitmask,8);
+							}
+							if(beatEffectsBitmaskString.charAt(2) == '1') {
+								b.effectsPresent.tappingPoppingSlappingStatus = readChar();
+							}
+							if(version >= 4) {
+								if(extendedEffectsBitmaskString.charAt(5) == '1') {
+									/*
+									[1 byte]:	The type of bend (0 = none, 1 = bend, 2 = bend and release, 3 = bend->release->bend, 4 = prebend, 5 = prebend and release,
+										6 = tremolo dip, 7 = tremolo dive, 8 = tremolo release [up], 9 = tremolo inverted dip, 10 = tremolo return, 11 = tremolo release [down])
+									[4 bytes]:	Bend height, measured in how much the pitch changes in cents (where the distance between two semi tones is 100 cents)
+									[4 bytes]:	Number of points to display the bend with
+									BEND POINT CHUNK, for each bend point
+										[4 bytes]:	Absolute time position relative to previous bend point (Valued 0 through 60, in sixtieths of the note's duration)
+										[4 bytes]:	Vertical position (Pitch alteration from normal note, in intervals of 25 cents)
+										[1 byte]:	Vibrato type (0 = none, 1 = fast, 2 = average, 3 = slow)
+									 */
+									b.effectsPresent.bendChunk = new BendChunk();
+									b.effectsPresent.bendChunk.bendType = readChar();
+									b.effectsPresent.bendChunk.bendHeight = readInt(4);
+									b.effectsPresent.bendChunk.numberOfBendPoints = readInt(4);
+									for(int l=0;l<b.effectsPresent.bendChunk.numberOfBendPoints;l++) {
+										b.effectsPresent.bendChunk.bendPointChunk[l] = new BendPointChunk();
+										b.effectsPresent.bendChunk.bendPointChunk[l].absoluteTimePosition = readInt(4);
+										b.effectsPresent.bendChunk.bendPointChunk[l].verticalPosition = readInt(4);
+										b.effectsPresent.bendChunk.bendPointChunk[l].vibratoType = readChar();
+									}
+								}
+							}
+							if(beatEffectsBitmaskString.charAt(1) == '1') {
+								b.effectsPresent.downstrokeSpeed = readChar();
+								b.effectsPresent.upstrokeSpeed = readChar();
+								b.effectsPresent.pickstrokeSpeed = readChar();
+							}
+						}
+						if(beatBitmaskString.charAt(3) == '1') {
+							b.mixTableChange = new MixTableChange();
+							b.mixTableChange.numberOfNewInstrument = readChar();
+							b.mixTableChange.rseNumber1 = readInt(4);
+							b.mixTableChange.rseNumber2 = readInt(4);
+							b.mixTableChange.rseNumber3 = readInt(4);
+							b.mixTableChange.unknown = readBytes(4);
+							b.mixTableChange.newVolume = readChar();
+							b.mixTableChange.newPanValue = readChar();
+							b.mixTableChange.newChorusValue = readChar();
+							b.mixTableChange.newReverbValue = readChar();
+							b.mixTableChange.newPhaserValue = readChar();
+							b.mixTableChange.newTremoloValue = readChar();
+							b.mixTableChange.tempoStringData = getContent41x();
+							b.mixTableChange.newTempo = readInt(4);
+							b.mixTableChange.volumeChange = readChar();
+							b.mixTableChange.panChange = readChar();
+							b.mixTableChange.chorusChange = readChar();
+							b.mixTableChange.reverbChange = readChar();
+							b.mixTableChange.phaserChange = readChar();
+							b.mixTableChange.tremoloChange = readChar();
+							///////////asldkjlkjqwlkjdlkqjwldkjqwlkdjlqwkdlkj
+							
+						}
+						
+						
+					}
+				}
+			}
+			
 			
 		} catch (FileNotFoundException e) {
 			e.printStackTrace();
@@ -700,9 +1169,9 @@ public class GpFile {
 		}
 	}
 	public static void main(String[] args) {
-		//File f = new File("d:\\ehehflrkd.gp5");
+		File f = new File("d:\\ehehflrkd.gp5");
 		//File f = new File("d:\\Jason Mraz - I'm Yours.gp5");
-		File f = new File("F:\\Bandscores(GP)\\이적_-_하늘을달리다-1212zxc.gp5");
+		//File f = new File("F:\\Bandscores(GP)\\이적_-_하늘을달리다-1212zxc.gp5");
 		
 		GpFile gp = new GpFile(f);
 		//gp.printHeader();
