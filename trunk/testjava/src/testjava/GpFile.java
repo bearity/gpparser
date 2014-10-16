@@ -15,6 +15,7 @@ import java.util.Arrays;
 
 class Version {
 	final static String GUITAR_PRO_510 = "FICHIER GUITAR PRO v5.10";
+	final static String GUITAR_PRO_5 = "FICHIER GUITAR PRO v5.00";
 }
 
 class Field {
@@ -356,7 +357,7 @@ class BeatSubChunk {
 	EffectsPresent effectsPresent;
 	MixTableChange mixTableChange;
 	int usedStringMask;
-	StringChunk stringChunk;
+	StringChunk[] stringChunk;
 	int noteTransposeBitmask;
 }
 
@@ -407,12 +408,12 @@ class StringChunk {
 	int nTuplet;
 	int dynamicity;
 	int fretNumber;
-	int leftHaneFingering;
+	int leftHandFingering;
 	int rightHandFingering;
 	byte[] unknown;
 	int noteEffect1Bitmask;
 	int noteEffect2Bitmask;
-	byte[] bendChunk;
+	BendChunk bendChunk;
 	int graceNoteFret;
 	int grateNoteDynamicity;
 	int graceNoteTransitionType;
@@ -524,6 +525,23 @@ class BendPointChunk {
 	int vibratoType;
 }
 
+class ChordType {
+	static final int _M = 0;
+	static final int _7 = 1;
+	static final int _7M = 2;
+	static final int _6 = 3;
+	static final int _m = 4;
+	static final int _m7 = 5;
+	static final int _m7M = 6;
+	static final int _m6 = 7;
+	static final int _sus2 = 8;
+	static final int _sus4 = 9;
+	static final int _7sus2 = 10;
+	static final int _7sus4 = 11;
+	static final int _dim = 12;
+	static final int _aug = 13;
+	static final int _5 = 14;
+}
 
 public class GpFile {
 	float version;
@@ -1114,10 +1132,73 @@ public class GpFile {
 							b.mixTableChange.reverbChange = readChar();
 							b.mixTableChange.phaserChange = readChar();
 							b.mixTableChange.tremoloChange = readChar();
-							///////////asldkjlkjqwlkjdlkqjwldkjqwlkdjlqwkdlkj
-							
+							b.mixTableChange.tempoChange = readChar();
+							if(b.mixTableChange.tempoChange != 0) {
+								b.mixTableChange.isTempoTextStringHidden = readChar();
+							}
+							if(version >= 4) {
+								b.mixTableChange.mixTableAppliedTracksBitmask = readChar();
+							}
+							if(version >= 5) {
+								b.mixTableChange.unknown2 = readBytes(1);
+							}
+							if(version >= 5) {
+								b.mixTableChange.rseEffect2 = getContent41x();
+								b.mixTableChange.rseEffect1 = getContent41x();
+							}
 						}
+						b.usedStringMask = readChar();
+						String usedString = toBinary(b.usedStringMask,8);
 						
+						b.stringChunk = new StringChunk[trackChunk[i].numberOfStrings];
+						for(int l=0;i<trackChunk[i].numberOfStrings;i++) {
+							b.stringChunk[l] = new StringChunk();
+							b.stringChunk[l].noteBitmask = readChar();
+							/*
+							Bit 0 (LSB):	Time-independent duration
+							Bit 1:		Dotted note
+							Bit 2:		Ghost note
+							Bit 3:		Note effects present
+							Bit 4:		Note dynamic
+							Bit 5:		Note type
+							Bit 6:		Accentuated note
+							Bit 7:		Right/Left hand fingering 
+							 */
+							String noteBitMaskString = toBinary(b.stringChunk[l].noteBitmask,8);
+							if(noteBitMaskString.charAt(2) == 1) {
+								b.stringChunk[l].noteType = readChar();
+							}
+							if(noteBitMaskString.charAt(7) == 1) {
+								b.stringChunk[l].duration = readChar();
+								b.stringChunk[l].nTuplet = readChar();
+							}
+							if(noteBitMaskString.charAt(3) == 1) {
+								b.stringChunk[l].dynamicity = readChar();
+							}
+							if(noteBitMaskString.charAt(1) == 1) {
+								b.stringChunk[l].leftHandFingering = readChar();
+								b.stringChunk[l].rightHandFingering = readChar();
+							}
+							if(version >= 5) {
+								b.stringChunk[l].unknown = readBytes(1);
+							}
+							if(noteBitMaskString.charAt(4) == 1) {
+								b.stringChunk[l].noteEffect1Bitmask = readChar();
+								if(version >= 4) {
+									b.stringChunk[l].noteEffect2Bitmask = readChar();
+								}
+								b.stringChunk[l].bendChunk = new BendChunk();
+								b.stringChunk[l].bendChunk.bendType = readChar();
+								b.stringChunk[l].bendChunk.bendHeight = readInt(4);
+								b.stringChunk[l].bendChunk.numberOfBendPoints = readInt(4);
+//								for(int m=0;m<b.stringChunk[l].bendChunk.numberOfBendPoints;l++) {
+//									b.stringChunk[l].bendChunk.bendPointChunk[l] = new BendPointChunk();
+//									b.stringChunk[l].bendChunk.bendPointChunk[l].absoluteTimePosition = readInt(4);
+//									b.stringChunk[l].bendChunk.bendPointChunk[l].verticalPosition = readInt(4);
+//									b.stringChunk[l].bendChunk.bendPointChunk[l].vibratoType = readChar();
+//								}
+							}
+						}
 						
 					}
 				}
@@ -1169,9 +1250,9 @@ public class GpFile {
 		}
 	}
 	public static void main(String[] args) {
-		File f = new File("d:\\ehehflrkd.gp5");
+		//File f = new File("d:\\ehehflrkd.gp5");
 		//File f = new File("d:\\Jason Mraz - I'm Yours.gp5");
-		//File f = new File("F:\\Bandscores(GP)\\이적_-_하늘을달리다-1212zxc.gp5");
+		File f = new File("F:\\Bandscores(GP)\\이적_-_하늘을달리다-1212zxc.gp5");
 		
 		GpFile gp = new GpFile(f);
 		//gp.printHeader();
