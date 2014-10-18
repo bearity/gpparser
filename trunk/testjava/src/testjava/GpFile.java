@@ -612,15 +612,10 @@ public class GpFile {
 		
 		byte[] byteTmp = readBytes(4);
 		
-		
-		readCount+=4;
-
 		tmpField.fieldLength = byteArrayToInt(byteTmp);
 		tmpField.stringLength = readChar();
-		readCount++;
 		
 		byteTmp = readBytes(tmpField.stringLength);
-		readCount+=tmpField.stringLength;
 		
 		try {
 			tmpField.string = new String(byteTmp, encoding);
@@ -683,7 +678,7 @@ public class GpFile {
 			[1 byte]:		Shuffle rhythm feel 
 			*/
 			
-			tmpInt = fis.read();
+			tmpInt = readChar();
 			tmpStr = new String(readBytes(tmpInt), encoding);
 			
 			switch(tmpStr) {
@@ -848,6 +843,9 @@ public class GpFile {
 
 			barChunk = new BarChunk[bars];
 			trackChunk = new TrackChunk[tracks];
+			System.out.println(bars+" bars");
+			System.out.println(tracks+" tracks");
+			
 			
 			for(int i=0;i<bars;i++) {
 				/*
@@ -877,6 +875,7 @@ public class GpFile {
 					System.out.print("newsection ");
 					barChunk[i].sectionName = getContent41x();
 					barChunk[i].sectionNameWith = readBytes(4);
+					System.out.println(barChunk[i].sectionName.string);
 				}
 				if(barBitmaskString.charAt(1) == '1') {
 					System.out.print("keysignaturechange ");
@@ -920,6 +919,7 @@ public class GpFile {
 				trackChunk[i].trackNameLength = readChar();
 				trackChunk[i].trackName = new String(readBytes(trackChunk[i].trackNameLength), encoding);
 				System.out.print("track["+i+"] "+trackBitmaskString+" : "+trackChunk[i].trackName+" ");
+				System.out.println();
 				readBytes(40-trackChunk[i].trackNameLength);
 				trackChunk[i].numberOfStrings = readInt(4);
 				trackChunk[i].stringTuningChunk = new int[7];
@@ -948,10 +948,7 @@ public class GpFile {
 					trackChunk[i].trackSettings.highFrequency = readChar();
 					trackChunk[i].trackSettings.allFrequencies = readChar();
 					trackChunk[i].trackSettings.instrumentEffect1 = getContent41x();
-					System.out.print(trackChunk[i].trackSettings.instrumentEffect1.string+" ");
 					trackChunk[i].trackSettings.instrumentEffect2 = getContent41x();
-					System.out.print(trackChunk[i].trackSettings.instrumentEffect2.string+" ");
-					System.out.println();
 				}
 				if(version == 5) {
 					readBytes(41);
@@ -1317,11 +1314,12 @@ public class GpFile {
 		}
 	}
 	public static void main(String[] args) {
-		File f = new File("d:\\testtest2.gp5");
+		//File f = new File("d:\\testtest2.gp5");
 		//File f = new File("d:\\ehehflrkd.gp5");
 		//File f = new File("d:\\Jason Mraz - I'm Yours.gp5");
 		//File f = new File("F:\\Bandscores(GP)\\이적_-_하늘을달리다-1212zxc.gp5");
-		
+		//File f = new File("F:\\Bandscores(GP)\\에어맨이쓰러지지않아_원본-klklo123-miffyhth-joo017.gp5");
+		File f = new File("F:\\Bandscores(GP)\\에어맨이_쓰러지지_않아-siro__yuki.gp5");
 		GpFile gp = new GpFile(f);
 		//gp.printHeader();
 		
