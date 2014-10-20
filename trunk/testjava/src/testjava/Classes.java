@@ -3,6 +3,7 @@ package testjava;
 class Version {
 	final static String GUITAR_PRO_510 = "FICHIER GUITAR PRO v5.10";
 	final static String GUITAR_PRO_5 = "FICHIER GUITAR PRO v5.00";
+	final static String GUITAR_PRO_4_06 = "FICHIER GUITAR PRO v4.06";
 }
 
 class Field {
@@ -403,6 +404,7 @@ class StringChunk {
 	int grateNoteDynamicity;
 	int graceNoteTransitionType;
 	int graceNoteDuration;
+	int graceNotePosition;
 	int tremoloPickingSpeed;
 	int slideType;
 	int harmonicType;
@@ -433,7 +435,7 @@ class MixTableChange {
 	int tempoChange;
 	int isTempoTextStringHidden;
 	int mixTableAppliedTracksBitmask;
-	byte[] unknown2;
+	int unknown2;
 	Field rseEffect2;
 	Field rseEffect1;
 }
@@ -494,7 +496,7 @@ class ChordDiagram1 {
 	int includeSeventhInterval;
 	int includeNinthInterval;
 	int includeEleventhInterval;
-	int includeThirteenInterval;
+	int includeThirteenthInterval;
 	int[] fingeringChunk;
 	int isChordFingeringDisplayed;
 }
