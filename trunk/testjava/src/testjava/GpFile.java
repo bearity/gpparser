@@ -279,7 +279,6 @@ public class GpFile {
 				if(barBitmaskString.charAt(2) == '1') {
 					barChunk.sectionName = getContent41x();
 					barChunk.sectionNameWith = readBytes(4);
-					System.out.println(barChunk.sectionName.string);
 				}
 				if(barBitmaskString.charAt(1) == '1') {
 					barChunk.key = readChar();
@@ -363,14 +362,14 @@ public class GpFile {
 		chordDiagram1.displaySharpInsteadFlat = readChar();
 		readBytes(3);
 		chordDiagram1.chordRoot = readChar();
-		chordDiagram1.unkonwn = readBytes(3);
+		//chordDiagram1.unkonwn = readBytes(3);
 		chordDiagram1.chordType = readChar();
-		chordDiagram1.unknown2 = readBytes(3);
+		//chordDiagram1.unknown2 = readBytes(3);
 		chordDiagram1.option = readChar();
-		chordDiagram1.unknown2 = readBytes(3);
+		//chordDiagram1.unknown3 = readBytes(3);
 		chordDiagram1.lowestNotePlayedInTheChord = readInt(4);
 		chordDiagram1.plusminusOption = readChar();
-		chordDiagram1.unknown3 = readBytes(4);
+		chordDiagram1.unknown4 = readBytes(4);
 		chordDiagram1.chordNameStringLength = readChar();
 		try {
 			chordDiagram1.chordName = new String(readBytes(chordDiagram1.chordNameStringLength),encoding);
@@ -380,11 +379,11 @@ public class GpFile {
 		readBytes(20-chordDiagram1.chordNameStringLength);
 		readBytes(2);
 		chordDiagram1.tonalityOfTheFifth = readChar();
-		readBytes(3);
+		//readBytes(3);
 		chordDiagram1.tonalityOfTheNinth = readChar();
-		readBytes(3);
+		//readBytes(3);
 		chordDiagram1.tonalityOfTheEleventh = readChar();
-		readBytes(3);
+		//readBytes(3);
 		chordDiagram1.chordDiagramBaseFretPosition = readInt(4);
 		chordDiagram1.fretChunk = new int[7];
 		for(int l=0;l<7;l++) {
@@ -557,12 +556,12 @@ public class GpFile {
 								beatSubChunk.chordDiagramFormat = readChar();
 								// !CHORD DIAGRAM FORMAT 0 (if the format identifier was 0, ie. GP3 format):
 								if(beatSubChunk.chordDiagramFormat == 0) {
-									System.out.print("CHORDDIAGRAM0");
+									System.out.print("CHORDDIAGRAM0 ");
 									beatSubChunk.chordDiagram0 = readChordDiagram0(trackChunk[i].numberOfStrings);
 								}
 								// !CHORD DIAGRAM FORMAT 1 (if the format identifier was 1, ie. GP4 format) (105 bytes):
 								if(beatSubChunk.chordDiagramFormat == 1) {
-									System.out.print("CHORDDIAGRAM1");
+									System.out.print("CHORDDIAGRAM1 ");
 									beatSubChunk.chordDiagram1 = readChordDiagram1();
 								}
 							}
@@ -806,12 +805,13 @@ public class GpFile {
 		//File f = new File("d:\\testtest2.gp5");
 		//File f = new File("d:\\ehehflrkd.gp5");
 		//File f = new File("d:\\Jason Mraz - I'm Yours.gp5");
+		File f = new File("d:\\yourtest.gp5");
 		//File f = new File("F:\\Bandscores(GP)\\이적_-_하늘을달리다-1212zxc.gp5"); // X
 		//File f = new File("F:\\Bandscores(GP)\\에어맨이쓰러지지않아_원본-klklo123-miffyhth-joo017.gp5"); // X
 		//File f = new File("F:\\Bandscores(GP)\\에어맨이_쓰러지지_않아-siro__yuki.gp5"); // ~TRACK
 		//File f = new File("F:\\Bandscores(GP)\\ash_like_snow.gp5"); // ~TRACK
 		//File f = new File("F:\\Bandscores(GP)\\avril_lavigne_-_sk8er_boi.gp5"); // ~TRACK
-		File f = new File("F:\\Bandscores(GP)\\siam_shade_-_triptych-1212zxc.gp5"); // TRACK OK
+		//File f = new File("F:\\Bandscores(GP)\\siam_shade_-_triptych-1212zxc.gp5"); // TRACK OK
 		//File f = new File("F:\\test.gp5");
 		GpFile gp = new GpFile(f);
 		//gp.printHeader();
