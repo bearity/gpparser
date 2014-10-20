@@ -12,6 +12,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 
 public class GpFile {
+	String beatmaskdesc = "";
+	String beathex = "";
 	float version;
 
 	Field title, subtitle, artist, album, lyricist, music, copyright, tab, instructions, songData;
@@ -252,9 +254,11 @@ public class GpFile {
 		musicalDirectionsDefinitions.daDoubleCoda = byteArrayToInt(readBytes(2));
 	}
 	public BarChunk readBarChunk() {
+		String barhex = "";
 		BarChunk barChunk = new BarChunk();
 		
 		barChunk.barBitmask = readChar();
+		barhex += String.format("BARBIT %02X ",barChunk.barBitmask);
 		String barBitmaskString = toBinary(barChunk.barBitmask,8);
 		if(version < 3) {
 			// end of repeat 1 byte
@@ -263,12 +267,15 @@ public class GpFile {
 		if(version >= 3) {
 			if(barBitmaskString.charAt(7) == '1') {
 				barChunk.tsNumerator = readChar();
+				barhex += String.format("TSNUM %02X ",barChunk.tsNumerator);
 			}
 			if(barBitmaskString.charAt(6) == '1') {
 				barChunk.tsDenominator = readChar();
+				barhex += String.format("TSDEN %02X ",barChunk.tsDenominator);
 			}
 			if(barBitmaskString.charAt(4) == '1') {
 				barChunk.endOfRepeat = readChar();
+				barhex += String.format("EOR %02X ",barChunk.endOfRepeat);
 			}
 			if(version < 5) {
 				// alternative ending 1 byte
@@ -279,6 +286,9 @@ public class GpFile {
 				if(barBitmaskString.charAt(2) == '1') {
 					barChunk.sectionName = getContent41x();
 					barChunk.sectionNameWith = readBytes(4);
+					barhex += String.format("SFLEN %08X ",barChunk.sectionName.fieldLength);
+					barhex += String.format("SFLEN %02X ",barChunk.sectionName.stringLength);
+					barhex += String.format("SFLEN %08X ",barChunk.sectionNameWith);
 				}
 				if(barBitmaskString.charAt(1) == '1') {
 					barChunk.key = readChar();
@@ -296,7 +306,7 @@ public class GpFile {
 			}
 			
 		}
-		
+		System.out.println(barhex);
 		return barChunk;
 	}
 	public TrackChunk readTrackChunk() {
@@ -433,27 +443,57 @@ public class GpFile {
 	public MixTableChange readMixTableChange() {
 		MixTableChange mixTableChange = new MixTableChange();  
 		mixTableChange.numberOfNewInstrument = readChar();
+		beathex += String.format("{NOI %02X ",mixTableChange.numberOfNewInstrument);
 		mixTableChange.rseNumber1 = readInt(4);
+		beathex += String.format("RSE1 %08X ",mixTableChange.rseNumber1);
 		mixTableChange.rseNumber2 = readInt(4);
+		beathex += String.format("RSE2 %08X ",mixTableChange.rseNumber2);
 		mixTableChange.rseNumber3 = readInt(4);
-		mixTableChange.unknown = readBytes(4);
+		beathex += String.format("RSE3 %08X ",mixTableChange.rseNumber3);
+		mixTableChange.unknown = readInt(4);
+		beathex += String.format("UNK %08X ",mixTableChange.unknown);
 		mixTableChange.newVolume = readChar();
+		beathex += String.format("NVOL %02X ",mixTableChange.newVolume);
 		mixTableChange.newPanValue = readChar();
+		beathex += String.format("NPAN %02X ",mixTableChange.newPanValue);
 		mixTableChange.newChorusValue = readChar();
+		beathex += String.format("NCHO %02X ",mixTableChange.newChorusValue);
 		mixTableChange.newReverbValue = readChar();
+		beathex += String.format("NREV %02X ",mixTableChange.newReverbValue);
 		mixTableChange.newPhaserValue = readChar();
+		beathex += String.format("NPHS %02X ",mixTableChange.newPhaserValue);
 		mixTableChange.newTremoloValue = readChar();
+		beathex += String.format("NTRE %02X ",mixTableChange.newTremoloValue);
 		mixTableChange.tempoStringData = getContent41x();
 		mixTableChange.newTempo = readInt(4);
-		mixTableChange.volumeChange = readChar();
-		mixTableChange.panChange = readChar();
-		mixTableChange.chorusChange = readChar();
-		mixTableChange.reverbChange = readChar();
-		mixTableChange.phaserChange = readChar();
-		mixTableChange.tremoloChange = readChar();
-		mixTableChange.tempoChange = readChar();
-		if(mixTableChange.tempoChange != 0) {
-			mixTableChange.isTempoTextStringHidden = readChar();
+		beathex += String.format("NTEM %02X ",mixTableChange.newTempo);
+		if(mixTableChange.newVolume != 255) {
+			mixTableChange.volumeChange = readChar();
+			beathex += String.format("VOLCH %02X ",mixTableChange.volumeChange);
+		}
+		if(mixTableChange.newPanValue != 255) {
+			mixTableChange.panChange = readChar();
+			beathex += String.format("PANCH %02X ",mixTableChange.panChange);
+		}
+		if(mixTableChange.newChorusValue != 255) {
+			mixTableChange.chorusChange = readChar();
+			beathex += String.format("CHOCH %02X ",mixTableChange.chorusChange);
+		}
+		if(mixTableChange.newReverbValue != 255) {
+			mixTableChange.reverbChange = readChar();
+			beathex += String.format("REVCH %02X ",mixTableChange.reverbChange);
+		}
+		if(mixTableChange.newPhaserValue != 255) {
+			mixTableChange.phaserChange = readChar();
+			beathex += String.format("PHACH %02X ",mixTableChange.phaserChange);
+		}
+		if(mixTableChange.newTremoloValue != 255) {
+			mixTableChange.tremoloChange = readChar();
+			beathex += String.format("TRECH %02X ",mixTableChange.tremoloChange);
+		}
+		if(mixTableChange.newTempo != -1) {
+			mixTableChange.tempoChange = readChar();
+			if(version > 5) mixTableChange.isTempoTextStringHidden = readChar();
 		}
 		if(version >= 4) {
 			mixTableChange.mixTableAppliedTracksBitmask = readChar();
@@ -465,6 +505,7 @@ public class GpFile {
 			mixTableChange.rseEffect2 = getContent41x();
 			mixTableChange.rseEffect1 = getContent41x();
 		}
+		beathex += "}";
 		return mixTableChange;
 	}
 	
@@ -490,6 +531,7 @@ public class GpFile {
 			System.out.println(tracks+" tracks");
 			
 			for(int i=0;i<bars;i++) {
+				System.out.print("[BAR "+i+"]");
 				barChunk[i] = readBarChunk();
 			}
 			for(int i=0;i<tracks;i++) {
@@ -501,17 +543,14 @@ public class GpFile {
 			
 			// BEAT CHUNK
 			beatChunkList = new ArrayList<BeatChunk>();
-			int measureCount=0;
-			while(measureCount!=49) {
-				if(measureCount == 48) {
-					System.out.println("48");
-				}
+			int measureCount=1;
+			while(measureCount<=bars) {
 				BeatChunk beatChunk = new BeatChunk();
 				beatChunk.beatChunkTrack = new BeatChunkTrack[tracks];
 				
 				int voices = (version >= 5) ? 2: 1;
 				for(int i=0;i<tracks;i++) {
-					System.out.println("MEASURE/TRACK["+measureCount+"/"+i+"]");
+					System.out.print("[Measure "+measureCount+"/Track "+i+"]\n");
 					beatChunk.beatChunkTrack[i] = new BeatChunkTrack();
 					beatChunk.beatChunkTrack[i].voiceChunk = new VoiceChunk[voices];
 					for(int j=0;j<voices;j++) {
@@ -519,11 +558,16 @@ public class GpFile {
 						VoiceChunk voiceChunk = beatChunk.beatChunkTrack[i].voiceChunk[j]; 
 						voiceChunk.numberOfBeats = readInt(4);
 						int numberOfBeats = voiceChunk.numberOfBeats;
-						System.out.println(numberOfBeats+" BEATS");
+						System.out.print(numberOfBeats+" BEATS ");
+						System.out.printf("%x\n",readCount);
 						
 						voiceChunk.beatSubChunk = new BeatSubChunk[numberOfBeats];
 						
 						for(int k=0;k<numberOfBeats;k++) {
+							if(numberOfBeats > 128) {
+								System.out.print("BEAT OVERFLOW");
+								System.exit(1);
+							}
 							voiceChunk.beatSubChunk[k] = new BeatSubChunk();
 							
 							BeatSubChunk beatSubChunk = voiceChunk.beatSubChunk[k];
@@ -540,17 +584,22 @@ public class GpFile {
 							beatSubChunk.beatBitmask = readChar();
 							String beatBitmaskString = toBinary(beatSubChunk.beatBitmask, 8);
 							
-							System.out.print("BEAT["+k+"] "+beatBitmaskString+" ");
+							System.out.print("BEAT["+k+"] ");
+							beatmaskdesc = "";
+							beathex = "";
+							beathex += String.format("BBIT %02X ",beatSubChunk.beatBitmask);
 							if(beatBitmaskString.charAt(1) == '1') {
-								System.out.print("REST ");
 								beatSubChunk.restType = readChar();
+								beathex += String.format("RTYPE %02X ",beatSubChunk.restType);
+								
 							}
 							beatSubChunk.beatDuration = readChar();
-							System.out.print(getBeatDuration(beatSubChunk.beatDuration)+" ");
+							beathex += String.format("DUR %02X ",beatSubChunk.beatDuration);
+							//System.out.print(getBeatDuration(beatSubChunk.beatDuration)+" ");
 							
 							if(beatBitmaskString.charAt(2) == '1') {
-								System.out.print("NTUPLET ");
-								beatSubChunk.nTuplet = readInt(4);
+								beatSubChunk.nTuplet = readBytes(4);
+								beathex += String.format("NTPL %02X%02X%02X%02X ",beatSubChunk.nTuplet[0],beatSubChunk.nTuplet[1],beatSubChunk.nTuplet[2],beatSubChunk.nTuplet[3]);
 							}
 							if(beatBitmaskString.charAt(6) == '1') {
 								beatSubChunk.chordDiagramFormat = readChar();
@@ -570,37 +619,46 @@ public class GpFile {
 								beatSubChunk.beatText = getContent41x();
 							}
 							if(beatBitmaskString.charAt(4) == '1') {
-								System.out.print("NOTEEFFECT ");
 								beatSubChunk.effectsPresent = new EffectsPresent();
 								EffectsPresent effectsPresent = beatSubChunk.effectsPresent; 
 								effectsPresent.beatEffectsBitmask = readChar();
+								beathex += String.format("BEBIT %02X ", effectsPresent.beatEffectsBitmask); 
 								String beatEffectsBitmaskString = toBinary(effectsPresent.beatEffectsBitmask,8);
 								String extendedEffectsBitmaskString = null;
 								if(version >= 4) {
 									effectsPresent.extendedBeatEffectsBitmask = readChar();
+									beathex += String.format("EXBEBIT %02X ", effectsPresent.extendedBeatEffectsBitmask);
 									extendedEffectsBitmaskString = toBinary(effectsPresent.extendedBeatEffectsBitmask,8);
 								}
 								if(beatEffectsBitmaskString.charAt(2) == '1') {
-									effectsPresent.tappingPoppingSlappingStatus = readChar();
+									effectsPresent.stringEffect = readChar();
+									beathex += String.format("TPS %02X ", effectsPresent.stringEffect);
 								}
 								if(version >= 4) {
 									if(extendedEffectsBitmaskString.charAt(5) == '1') {
 										effectsPresent.bendChunk = new BendChunk();
 										BendChunk bendChunk = effectsPresent.bendChunk; 
 										bendChunk.bendType = readChar();
+										beathex += String.format("{BTYPE %02X ",bendChunk.bendType);
 										bendChunk.bendHeight = readInt(4);
+										beathex += String.format("BHGT %02X ",bendChunk.bendHeight);
 										bendChunk.numberOfBendPoints = readInt(4);
+										beathex += String.format("NBP %08X ",bendChunk.numberOfBendPoints);
 										
 										bendChunk.bendPointChunk = new BendPointChunk[bendChunk.numberOfBendPoints];
 										for(int l=0;l<bendChunk.numberOfBendPoints;l++) {
 											bendChunk.bendPointChunk[l] = new BendPointChunk();
 											bendChunk.bendPointChunk[l].absoluteTimePosition = readInt(4);
+											beathex += String.format("ATP %08X ",bendChunk.bendPointChunk[l].absoluteTimePosition);
 											bendChunk.bendPointChunk[l].verticalPosition = readInt(4);
+											beathex += String.format("VP %08X ",bendChunk.bendPointChunk[l].verticalPosition);
 											bendChunk.bendPointChunk[l].vibratoType = readChar();
+											beathex += String.format("VTYPE %02X} ",bendChunk.bendPointChunk[l].vibratoType);
 										}
 									}
 								}
 								if(beatEffectsBitmaskString.charAt(1) == '1') {
+									System.out.println("STROKE ");
 									beatSubChunk.effectsPresent.downstrokeSpeed = readChar();
 									beatSubChunk.effectsPresent.upstrokeSpeed = readChar();
 									beatSubChunk.effectsPresent.pickstrokeSpeed = readChar();
@@ -612,7 +670,8 @@ public class GpFile {
 							}
 							beatSubChunk.usedStringMask = readChar();
 							String usedString = toBinary(beatSubChunk.usedStringMask,7);
-							System.out.print(usedString+" ");
+							beathex += String.format("USE %02X ", beatSubChunk.usedStringMask);
+							
 							ArrayList<Integer> stringOrder = new ArrayList<Integer>();
 							int strings = 0;
 							for(int l=0;l<usedString.length();l++) {
@@ -627,6 +686,7 @@ public class GpFile {
 								beatSubChunk.stringChunk[l] = new StringChunk();
 								StringChunk stringChunk = beatSubChunk.stringChunk[l]; 
 								stringChunk.noteBitmask = readChar();
+								beathex += String.format("[String"+l+"]NBIT %02X ",stringChunk.noteBitmask);
 								/*
 								Bit 0 (LSB):	Time-independent duration
 								Bit 1:		Heavy Accentuated note (GP5 or higher only, usage in older formats is unknown)
@@ -638,21 +698,21 @@ public class GpFile {
 								Bit 7:		Right/Left hand fingering
 								*/
 								String noteBitMaskString = toBinary(stringChunk.noteBitmask,8);
-								System.out.print(noteBitMaskString+" ");
 								if(noteBitMaskString.charAt(2) == '1') {
 									stringChunk.noteType = readChar();
-									System.out.print("NOTETYPE:");
-									switch(stringChunk.noteType) {
-									case 1:
-										System.out.print("NORMAL ");
-										break;
-									case 2:
-										System.out.print("TIE ");
-										break;
-									case 3:
-										System.out.print("MUTED ");
-										break;
-									}
+									beathex += String.format("NTYPE %02X ",stringChunk.noteType);
+//									System.out.print("NOTETYPE:");
+//									switch(stringChunk.noteType) {
+//									case 1:
+//										System.out.print("NORMAL ");
+//										break;
+//									case 2:
+//										System.out.print("TIE ");
+//										break;
+//									case 3:
+//										System.out.print("MUTED ");
+//										break;
+//									}
 								}
 								if(version < 5) {
 									// time independent duration 2 bytes
@@ -665,22 +725,25 @@ public class GpFile {
 								}
 								if(noteBitMaskString.charAt(2) == '1') {
 									stringChunk.fretNumber = readChar();
-									System.out.print("FRETNUMBER:"+stringChunk.fretNumber+" ");
+									beathex += String.format("FRET %02X ", stringChunk.fretNumber);
 								}
-								if(noteBitMaskString.charAt(1) == '1') {
+								if(noteBitMaskString.charAt(0) == '1') {
 									
 									stringChunk.leftHandFingering = readChar();
 									stringChunk.rightHandFingering = readChar();
+									beathex += String.format("LRFI ");
 								}
 								if(version >= 5) {
 									if(noteBitMaskString.charAt(7) == '1') {
-										System.out.print("TIMEINDEPENDENTDURATION ");
-										readBytes(8);
+										byte[] tid = readBytes(8);
+										beathex += String.format("TID %02X%02X%02X%02X ",tid[0],tid[1],tid[2],tid[3],tid[4],tid[5],tid[6],tid[7]);
 									}
-									stringChunk.unknown = readBytes(1);
+									stringChunk.unknown = readChar();
+									beathex += String.format("UNK %02X ",stringChunk.unknown);
 								}
 								if(noteBitMaskString.charAt(4) == '1') {
 									stringChunk.noteEffect1Bitmask = readChar();
+									beathex += String.format("NE1 %02X ",stringChunk.noteEffect1Bitmask);
 									String noteEffect1BitmaskString = toBinary(stringChunk.noteEffect1Bitmask,8);
 									/*
 									 The note effect 1 bitmask declares which effects are defined for the note:
@@ -704,6 +767,7 @@ public class GpFile {
 									
 									if(version >= 4) {
 										stringChunk.noteEffect2Bitmask = readChar();
+										beathex += String.format("NE2 %02X ",stringChunk.noteEffect2Bitmask);
 									}
 									if(noteEffect1BitmaskString.charAt(7) == '1') {
 										stringChunk.bendChunk = new BendChunk();
@@ -747,11 +811,15 @@ public class GpFile {
 								}
 							}
 							if(version >= 5) {
-								beatSubChunk.noteTransposeBitmask = readInt(2);
+								beatSubChunk.noteTransposeBitmask = readBytes(2);
+								beathex += String.format("TBIT %02X%02X ",(int)beatSubChunk.noteTransposeBitmask[0],(int)beatSubChunk.noteTransposeBitmask[1]);
 								// ADDITIONAL UNKNOWN DATA BYTE (if the note transpose bitmask declares this)
-								//readChar();
+								if(beatSubChunk.noteTransposeBitmask[1] == 8 || beatSubChunk.noteTransposeBitmask[1] == 10) {
+									readChar();
+								}
 							}
-							System.out.println();
+							
+							System.out.println(beathex);
 							
 							
 						}
@@ -805,14 +873,12 @@ public class GpFile {
 		//File f = new File("d:\\testtest2.gp5");
 		//File f = new File("d:\\ehehflrkd.gp5");
 		//File f = new File("d:\\Jason Mraz - I'm Yours.gp5");
-		File f = new File("d:\\yourtest.gp5");
-		//File f = new File("F:\\Bandscores(GP)\\이적_-_하늘을달리다-1212zxc.gp5"); // X
+		//File f = new File("d:\\yourtest.gp5");
+		File f = new File("F:\\Bandscores(GP)\\이적_-_하늘을달리다-1212zxc.gp5"); // X
 		//File f = new File("F:\\Bandscores(GP)\\에어맨이쓰러지지않아_원본-klklo123-miffyhth-joo017.gp5"); // X
 		//File f = new File("F:\\Bandscores(GP)\\에어맨이_쓰러지지_않아-siro__yuki.gp5"); // ~TRACK
 		//File f = new File("F:\\Bandscores(GP)\\ash_like_snow.gp5"); // ~TRACK
 		//File f = new File("F:\\Bandscores(GP)\\avril_lavigne_-_sk8er_boi.gp5"); // ~TRACK
-		//File f = new File("F:\\Bandscores(GP)\\siam_shade_-_triptych-1212zxc.gp5"); // TRACK OK
-		//File f = new File("F:\\test.gp5");
 		GpFile gp = new GpFile(f);
 		//gp.printHeader();
 	}
