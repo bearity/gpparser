@@ -333,7 +333,7 @@ class BeatSubChunk {
 	int beatBitmask;
 	int restType;
 	int beatDuration;
-	int nTuplet;
+	byte[] nTuplet;
 	//!CHORD DIAGRAM (if the beat bitmask declares that a chord diagram is present):
 	ChordDiagram0 chordDiagram0;
 	ChordDiagram1 chordDiagram1;
@@ -343,7 +343,7 @@ class BeatSubChunk {
 	MixTableChange mixTableChange;
 	int usedStringMask;
 	StringChunk[] stringChunk;
-	int noteTransposeBitmask;
+	byte[] noteTransposeBitmask;
 }
 
 class StringChunk {
@@ -395,7 +395,7 @@ class StringChunk {
 	int fretNumber;
 	int leftHandFingering;
 	int rightHandFingering;
-	byte[] unknown;
+	int unknown;
 	int noteEffect1Bitmask;
 	int noteEffect2Bitmask;
 	BendChunk bendChunk;
@@ -415,7 +415,7 @@ class MixTableChange {
 	int rseNumber1;
 	int rseNumber2;
 	int rseNumber3;
-	byte[] unknown;
+	int unknown;
 	int newVolume;
 	int newPanValue;
 	int newChorusValue;
@@ -441,7 +441,7 @@ class MixTableChange {
 class EffectsPresent {
 	int beatEffectsBitmask;
 	int extendedBeatEffectsBitmask;
-	int tappingPoppingSlappingStatus;
+	int stringEffect;
 	int tremoloStatus;
 	int strokeEffect;
 	int pickStrokeEffect;
