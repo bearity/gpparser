@@ -586,7 +586,6 @@ public class GpParser {
 			fis = new FileInputStream(f);
 			
 			readHeader();
-			printHeader();
 			readTrackData();
 			if(version >= 5) {
 				readMusicalDirectionsDefinitions();
@@ -604,7 +603,6 @@ public class GpParser {
 			System.out.println(bars+" bars");
 			System.out.println(tracks+" tracks");
 			
-			System.exit(1);
 			for(int i=0;i<bars;i++) {
 				System.out.printf("[BAR %d(%04x)]",i+1,readCount);
 				barChunk[i] = readBarChunk();
@@ -766,32 +764,10 @@ public class GpParser {
 								StringChunk stringChunk = beatSubChunk.stringChunk[l]; 
 								stringChunk.noteBitmask = readChar();
 								beathex += String.format("[String"+l+"]NBIT %02X ",stringChunk.noteBitmask);
-								/*
-								Bit 0 (LSB):	Time-independent duration
-								Bit 1:		Heavy Accentuated note (GP5 or higher only, usage in older formats is unknown)
-								Bit 2:		Ghost note
-								Bit 3:		Note effects present
-								Bit 4:		Note dynamic
-								Bit 5:		Note type
-								Bit 6:		Accentuated note
-								Bit 7:		Right/Left hand fingering
-								*/
 								String noteBitMaskString = toBinary(stringChunk.noteBitmask,8);
 								if(noteBitMaskString.charAt(2) == '1') {
 									stringChunk.noteType = readChar();
 									beathex += String.format("NTYPE %02X ",stringChunk.noteType);
-//									System.out.print("NOTETYPE:");
-//									switch(stringChunk.noteType) {
-//									case 1:
-//										System.out.print("NORMAL ");
-//										break;
-//									case 2:
-//										System.out.print("TIE ");
-//										break;
-//									case 3:
-//										System.out.print("MUTED ");
-//										break;
-//									}
 								}
 								if(version < 5) {
 									// time independent duration 2 bytes
@@ -823,25 +799,6 @@ public class GpParser {
 									stringChunk.noteEffect1Bitmask = readChar();
 									beathex += String.format("NE1 %02X ",stringChunk.noteEffect1Bitmask);
 									String noteEffect1BitmaskString = toBinary(stringChunk.noteEffect1Bitmask,8);
-									/*
-									 The note effect 1 bitmask declares which effects are defined for the note:
-									Bit 0 (LSB):	Bend present
-									Bit 1:		Hammer on/Pull off from the current note
-									Bit 2:		Slide from the current note (GP3 format version)
-									Bit 3:		Let ring
-									Bit 4:		Grace note
-									Bits 5-7:	Unused (set to 0)
-									
-									 The note effect 2 bitmask declares more effects for the note:
-									Bit 0 (LSB):	Note played staccato
-									Bit 1:		Palm Mute
-									Bit 2:		Tremolo Picking
-									Bit 3:		Slide from the current note
-									Bit 4:		Harmonic note
-									Bit 5:		Trill
-									Bit 6:		Vibrato
-									Bit 7 (MSB):	Unused (set to 0) 
-									 */
 									
 									if(version >= 4) {
 										stringChunk.noteEffect2Bitmask = readChar();
@@ -978,10 +935,10 @@ public class GpParser {
 	public static void main(String[] args) {
 		//File f = new File("d:\\testtest2.gp5");
 		//File f = new File("d:\\ehehflrkd.gp5");
-		//File f = new File("d:\\Jason Mraz - I'm Yours.gp5");
+		File f = new File("d:\\Jason Mraz - I'm Yours.gp5");
 		//File f = new File("d:\\yourtest.gp5");
 		//File f = new File("F:\\Bandscores(GP)\\이적_-_하늘을달리다-1212zxc.gp5"); // O
-		File f = new File("F:\\Bandscores(GP)\\05Lavigne,_Avril_-_Sk8er_Boi.gp4"); // O
+		//File f = new File("F:\\Bandscores(GP)\\05Lavigne,_Avril_-_Sk8er_Boi.gp4"); // O
 		//File f = new File("F:\\Bandscores(GP)\\에어맨이_쓰러지지_않아-siro__yuki.gp5"); // ~TRACK
 		//File f = new File("F:\\Bandscores(GP)\\ash_like_snow.gp5"); // ~TRACK
 		//File f = new File("F:\\Bandscores(GP)\\avril_lavigne_-_sk8er_boi.gp5"); // ~TRACK
