@@ -10,6 +10,9 @@ import java.nio.CharBuffer;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Iterator;
+
+import midiwriter.MidiWriter;
 
 public class GpParser {
 	String beatmaskdesc = "";
@@ -325,7 +328,7 @@ public class GpParser {
 			}
 			
 		}
-		System.out.println(barhex);
+		//System.out.println(barhex);
 		return barChunk;
 	}
 	public TrackChunk readTrackChunk() {
@@ -381,7 +384,7 @@ public class GpParser {
 		if(version == 5) {
 			readBytes(45);
 		}
-		System.out.println(trackhex);
+		//System.out.println(trackhex);
 		return trackChunk;
 	}
 	public ChordDiagram0 readChordDiagram0(int numberOfStrings) {
@@ -604,11 +607,11 @@ public class GpParser {
 			System.out.println(tracks+" tracks");
 			
 			for(int i=0;i<bars;i++) {
-				System.out.printf("[BAR %d(%04x)]",i+1,readCount);
+				//System.out.printf("[BAR %d(%04x)]",i+1,readCount);
 				barChunk[i] = readBarChunk();
 			}
 			for(int i=0;i<tracks;i++) {
-				System.out.printf("[TRACK %d(%04x)]",i+1,readCount);
+				//System.out.printf("[TRACK %d(%04x)]",i+1,readCount);
 				trackChunk[i] = readTrackChunk();
 			}
 			if(version >= 5) {
@@ -659,7 +662,7 @@ public class GpParser {
 							beatSubChunk.beatBitmask = readChar();
 							String beatBitmaskString = toBinary(beatSubChunk.beatBitmask, 8);
 							
-							System.out.print("BEAT["+k+"] ");
+							//System.out.print("BEAT["+k+"] ");
 							beatmaskdesc = "";
 							beathex = "";
 							beathex += String.format("BBIT %02X ",beatSubChunk.beatBitmask);
@@ -882,7 +885,7 @@ public class GpParser {
 								}
 							}
 							
-							System.out.println(beathex);
+							//System.out.println(beathex);
 							
 							
 						}
@@ -935,15 +938,17 @@ public class GpParser {
 	public static void main(String[] args) {
 		//File f = new File("d:\\testtest2.gp5");
 		//File f = new File("d:\\ehehflrkd.gp5");
-		File f = new File("d:\\Jason Mraz - I'm Yours.gp5");
+		//File f = new File("d:\\Jason Mraz - I'm Yours.gp5");
 		//File f = new File("d:\\yourtest.gp5");
 		//File f = new File("F:\\Bandscores(GP)\\이적_-_하늘을달리다-1212zxc.gp5"); // O
 		//File f = new File("F:\\Bandscores(GP)\\05Lavigne,_Avril_-_Sk8er_Boi.gp4"); // O
-		//File f = new File("F:\\Bandscores(GP)\\에어맨이_쓰러지지_않아-siro__yuki.gp5"); // ~TRACK
-		//File f = new File("F:\\Bandscores(GP)\\ash_like_snow.gp5"); // ~TRACK
-		//File f = new File("F:\\Bandscores(GP)\\avril_lavigne_-_sk8er_boi.gp5"); // ~TRACK
+		File f = new File("F:\\Bandscores(GP)\\에어맨이_쓰러지지_않아-siro__yuki.gp5"); 
+		//File f = new File("F:\\Bandscores(GP)\\ash_like_snow.gp5"); 
+		//File f = new File("F:\\Bandscores(GP)\\avril_lavigne_-_sk8er_boi.gp5"); 
 		GpParser gp = new GpParser(f);
 		//gp.printHeader();
+		gp.printSingleTrack(0);
+		
 	}
 	
 	public static int byteArrayToInt(byte[] b) 
@@ -974,6 +979,118 @@ public class GpParser {
 	}
 	public void printField(Field f) {
 		System.out.println(f.fieldLength + " " + f.stringLength + " " +f.string);
+	}
+	
+	class Note {
+		int type; 
+		// 0 : rest
+		// 1 : normal
+		int duration;
+		int[] sound;
+	}
+	
+	public void printSingleTrack(int track) {
+		ArrayList<Note> notes = new ArrayList<Note>();
+		System.out.println("KEY : "+keyOctaveInfo.key);
+		System.out.println("BPM : "+bpm);
+		
+		Iterator<BeatChunk> itBeat = beatChunkList.iterator();
+		
+		while(itBeat.hasNext()) {
+			BeatChunk bChunk = itBeat.next();
+			BeatChunkTrack bChunkTrack = bChunk.beatChunkTrack[track];
+			VoiceChunk vChunk = bChunkTrack.voiceChunk[0];
+			for(BeatSubChunk bs : vChunk.beatSubChunk) {
+				Note note = new Note();
+				int usedString = bs.usedStringMask;
+				String usedStringBin = toBinary(usedString,7);
+				note.sound = new int[countOne(usedStringBin)];
+				int stringCnt=0;
+				note.duration = bs.beatDuration;
+				if(usedString == 0) {
+					note.type = 0;
+					note.sound[0] = -1;
+					note.duration = -2;
+				}
+				else {
+					note.type = 1;
+					for(int i=0;i<usedStringBin.length();i++) {
+						if(usedStringBin.charAt(i) == '1') {
+							note.sound[stringCnt] = trackChunk[track].stringTuningChunk[i] + bs.stringChunk[0].fretNumber;
+							stringCnt++;
+						}
+					}
+				}
+				notes.add(note);
+			}
+		}
+		
+		Iterator<Note> itNotes = notes.iterator();
+		MidiWriter mw = new MidiWriter();
+		while(itNotes.hasNext()) {
+			Note note = itNotes.next();
+			if(note.sound.length > 1) {
+				for(int s:note.sound) {
+					mw.noteOn(0, s, 127);
+					System.out.println(s);
+				}
+				
+				for(int i=0;i<note.sound.length;i++) {
+					if(i == 0) {
+						mw.noteOff(convertDuration(note.duration), note.sound[i]);
+					}
+					else {
+						mw.noteOff(0, note.sound[i]);	
+					}
+				}
+			}
+			else {
+				mw.noteOnOffNow(convertDuration(note.duration), note.sound[0], 127);
+				System.out.println(convertDuration(note.duration)+" "+note.sound[0]+" "+127);
+			}
+			
+		}
+		
+		try {
+			mw.setBPM(180);
+			mw.progChange (27);
+			mw.writeToFile("f:\\test_output.mid");
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		
+	}
+	public int convertDuration(int gpDuration) {
+//		 static final int SEMIQUAVER = 4;
+//		  static final int QUAVER = 8;
+//		  static final int CROTCHET = 16;
+//		  static final int MINIM = 32;
+//		  static final int SEMIBREVE = 64;
+// -2 whole -1 half 0 quarter 1 - ei 2- six 3- thir 4- sixty
+		switch(gpDuration) {
+		case 0:
+			return 16;
+		case 1:
+			return 8;
+		case 2:
+			return 4;
+		case 255:
+			return 16;
+		case 254:
+			return 32;
+		default:
+			return 8;
+		}
+	}
+	public int countOne(String str) {
+		int cnt=0;
+		for(int i=0;i<str.length();i++) {
+			if(str.charAt(i) == '1') {
+				cnt++;
+			}
+		}
+		if(cnt == 0) cnt = 1;
+		return cnt;
 	}
 }
 
