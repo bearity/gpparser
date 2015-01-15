@@ -936,15 +936,7 @@ public class GpParser {
 		}
 	}
 	public static void main(String[] args) {
-		//File f = new File("d:\\testtest2.gp5");
-		//File f = new File("d:\\ehehflrkd.gp5");
-		//File f = new File("d:\\Jason Mraz - I'm Yours.gp5");
-		//File f = new File("d:\\yourtest.gp5");
-		//File f = new File("F:\\Bandscores(GP)\\이적_-_하늘을달리다-1212zxc.gp5"); // O
-		//File f = new File("F:\\Bandscores(GP)\\05Lavigne,_Avril_-_Sk8er_Boi.gp4"); // O
-		File f = new File("F:\\Bandscores(GP)\\에어맨이_쓰러지지_않아-siro__yuki.gp5"); 
-		//File f = new File("F:\\Bandscores(GP)\\ash_like_snow.gp5"); 
-		//File f = new File("F:\\Bandscores(GP)\\avril_lavigne_-_sk8er_boi.gp5"); 
+		File f = new File("d:\\Jason Mraz - I'm Yours.gp5");
 		GpParser gp = new GpParser(f);
 		//gp.printHeader();
 		gp.printSingleTrack(0);
@@ -1009,7 +1001,7 @@ public class GpParser {
 				note.duration = bs.beatDuration;
 				if(usedString == 0) {
 					note.type = 0;
-					note.sound[0] = -1;
+					note.sound[0] = 0;
 					note.duration = -2;
 				}
 				else {
@@ -1054,7 +1046,7 @@ public class GpParser {
 		try {
 			mw.setBPM(180);
 			mw.progChange (27);
-			mw.writeToFile("f:\\test_output.mid");
+			mw.writeToFile("d:\\test_output.mid");
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -1074,6 +1066,10 @@ public class GpParser {
 			return 8;
 		case 2:
 			return 4;
+		case 3:
+			return 2;
+		case 4:
+			return 1;
 		case 255:
 			return 16;
 		case 254:
